@@ -49,6 +49,12 @@ jobs:
       - name: Copy Nginx configuration
         run: cp ./etc/nginx/nginx.conf ./atom/docker/etc/nginx/nginx.conf
 
+      - name: Copy entrypoint script
+        run: cp ./entrypoint.sh ./atom/docker/entrypoint.sh
+
+      - name: Copy php bootstrap
+        run: cp ./bootstrap.php ./atom/docker/bootstrap.php
+
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
