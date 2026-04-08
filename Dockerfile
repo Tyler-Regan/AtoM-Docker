@@ -50,21 +50,21 @@ RUN set -xe \
       gnu-libiconv \
     && npm install -g "less@<4.0.0"
 
-COPY composer.* /usr/share/nginx/atom/build/
-RUN set -xe && composer install -d /usr/share/nginx/atom/build
+COPY composer.* /atom/build/
+RUN set -xe && composer install -d /atom/build
 
-COPY package* /usr/share/nginx/atom/build/
-RUN set -xe && npm ci --prefix /usr/share/nginx/atom/build
+COPY package* /atom/build/
+RUN set -xe && npm ci --prefix /atom/build
 
-COPY . /usr/share/nginx/atom
+COPY . /atom
 
-WORKDIR /usr/share/nginx/atom
+WORKDIR /atom
 
 RUN set -xe \
-    && mv /usr/share/nginx/atom/build/vendor/composer vendor/ \
-    && mv /usr/share/nginx/atom/build/node_modules . \
+    && mv /atom/build/vendor/composer vendor/ \
+    && mv /atom/build/node_modules . \
     && npm run build \
-    && rm -rf /usr/share/nginx/atom/build/
+    && rm -rf /atom/build/
 
 FROM php:8.3-fpm-alpine AS runtime
 
@@ -98,9 +98,9 @@ RUN set -xe \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 
-COPY --from=app-builder --chown=www-data:www-data /usr/share/nginx/atom /usr/share/nginx/atom
+COPY --from=app-builder --chown=www-data:www-data /atom /atom
 
-WORKDIR /usr/share/nginx/atom
+WORKDIR /atom
 
 
 ENTRYPOINT ["docker/entrypoint.sh"]
