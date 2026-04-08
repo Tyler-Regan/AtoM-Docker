@@ -46,6 +46,9 @@ jobs:
           ref: ${{ env.ATOM_REF }}
           path: atom
 
+      - name: Copy Nginx configuration
+        run: cp ./etc/nginx/nginx.conf ./atom/docker/etc/nginx/nginx.conf
+
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
