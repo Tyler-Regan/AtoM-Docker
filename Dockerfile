@@ -93,14 +93,14 @@ RUN set -xe \
 COPY --from=php-ext-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=php-ext-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
-COPY docker/etc/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ../etc/nginx/nginx.conf /etc/nginx/nginx.conf
 RUN set -xe \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 
-COPY --from=app-builder --chown=www-data:www-data /atom /atom
+COPY --from=app-builder --chown=www-data:www-data /atom /atom/src
 
-WORKDIR /atom
+WORKDIR /atom/src
 
 
 ENTRYPOINT ["docker/entrypoint.sh"]
