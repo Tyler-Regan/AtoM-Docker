@@ -43,33 +43,50 @@ case $1 in
         ;;
     'init')
         echo "Performing initialization tasks..."
-        # Run database migrations
-        php symfony tools:upgrade-sql --no-confirmation
-        echo "Database migrations completed."
 
-        # Populate search index
-        php symfony search:populate
-        echo "Search index populated."
+        # Check if instance has been initialized before
+        if php symfony tools:get-version; then
+          echo "Instance already initialized. Skipping initialization tasks."
 
-        # Set site title
-        php symfony tools:settings set siteTitle "${ATOM_SITE_TITLE:-My Atom Site}"
-        echo "Site title set to: ${ATOM_SITE_TITLE:-My Atom Site}"
-        # Set site description
-        php symfony tools:settings set siteDescription "${ATOM_SITE_DESCRIPTION:-Welcome to My Atom Site}"
-        echo "Site description set to: ${ATOM_SITE_DESCRIPTION:-Welcome to My Atom Site}"
-        # Set site base URL
-        php symfony tools:settings set siteBaseUrl "${ATOM_SITE_BASE_URL:-http://127.0.0.1}"
-        echo "Site base URL set to: ${ATOM_SITE_BASE_URL:-http://127.0.0.1}"
+          echo "Applying configuration settings from environment variables (if set)..."
+          # Set site title
+          php symfony tools:settings set siteTitle "${ATOM_SITE_TITLE:-My Atom Site}"
+          echo "Site title set to: ${ATOM_SITE_TITLE:-My Atom Site}"
+          # Set site description
+          php symfony tools:settings set siteDescription "${ATOM_SITE_DESCRIPTION:-Welcome to My Atom Site}"
+          echo "Site description set to: ${ATOM_SITE_DESCRIPTION:-Welcome to My Atom Site}"
+          # Set site base URL
+          php symfony tools:settings set siteBaseUrl "${ATOM_SITE_BASE_URL:-http://127.0.0.1}"
+          echo "Site base URL set to: ${ATOM_SITE_BASE_URL:-http://127.0.0.1}"
 
-        # Create admin user if not exists
-        ADMIN_CREATE=$(php symfony tools:add-superuser --email="${ATOM_ADMIN_EMAIL:-admin@example.com}" --password="${ATOM_ADMIN_PASSWORD:-admin}" ${ATOM_ADMIN_USERNAME:-admin})
-        if [ $ADMIN_CREATE -eq 0 ]; then
-          echo "Admin user created with username: ${ATOM_ADMIN_USERNAME:-admin}"
+          exit 0
         else
-          echo "Admin user already exists or failed to create."
+          echo "Instance has not been initialized. Proceeding with initialization..."
+
+          cat ./apps/qubit/config/app.yml
+          cat ./apps/qubit/config/factories.yml
+
+          # Run installer command
+          php -d memory_limit=-1 symfony tools:install \
+            --database-host=${DB_HOST:-db} \
+            --database-port=${DB_PORT:-3306} \
+            --database-name=${MYSQL_DATABASE:-atom_db} \
+            --database-user=${MYSQL_USER:-atom_user} \
+            --database-password=${MYSQL_PASSWORD:-atompassword123} \
+            --search-host=${ELASTICSEARCH_HOST:-elasticsearch} \
+            --search-port=${ELASTICSEARCH_PORT:-9200} \
+            --search-index=atom \
+            --site-title="${ATOM_SITE_TITLE:-My Atom Site}" \
+            --site-description="${ATOM_SITE_DESCRIPTION:-Welcome to My Atom Site}" \
+            --site-base-url="${ATOM_SITE_BASE_URL:-http://127.0.0.1}" \
+            --admin-username=${ATOM_ADMIN_USERNAME:-admin} \
+            --admin-email=${ATOM_ADMIN_EMAIL:-admin@example.com} \
+            --admin-password=${ATOM_ADMIN_PASSWORD:-admin} \
+            --no-confirmation
         fi
 
         echo "Initialization complete."
+        exit 0
         ;;
 esac
 

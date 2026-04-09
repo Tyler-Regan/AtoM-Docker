@@ -44,7 +44,7 @@ $CONFIG = [
     'atom.elasticsearch_host' => getenv_or_fail('ELASTICSEARCH_HOST'),
     'atom.elasticsearch_port' => getenv_or_fail('ELASTICSEARCH_PORT'),
     'atom.memcached_host' => getenv_or_fail('MEMCACHED_HOST'),
-    'atom.memcached_PORT' => getenv_or_fail('MEMCACHED_PORT'),
+    'atom.memcached_port' => getenv_or_fail('MEMCACHED_PORT'),
     'atom.gearmand_host' => getenv_or_fail('GEARMAND_HOST'),
     'atom.mysql_dsn' => 'mysql:host=' . getenv_or_fail('DB_HOST') . ';port=' . getenv_or_fail('DB_PORT') . ';dbname=' . getenv_or_fail('MYSQL_DATABASE') . ';charset=utf8mb4',
     'atom.mysql_username' => getenv_or_fail('MYSQL_USER'),

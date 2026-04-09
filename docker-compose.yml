@@ -4,19 +4,19 @@ services:
   atom:
     image: ghcr.io/tyler-regan/atom-docker:v2.10.1
     depends_on:
+      atom_init:
+        condition: service_completed_successfully
       cache:
         condition: service_healthy
       db:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
-      gearman:
+      gearmand:
         condition: service_healthy
-      init-db:
-        condition: service_completed_successfully
     volumes:
-      - atom_uploads:/var/www/atom/uploads
-      - atom_cache:/var/www/atom/cache
+      - atom_uploads:/var/www/atom/uploads:rw
+      - atom_cache:/var/www/atom/cache:rw
     env_file:
       - .env
     ports:
@@ -37,11 +37,11 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
-      gearman:
+      gearmand:
         condition: service_healthy
     volumes:
-      - atom_uploads:/var/www/atom/uploads
-      - atom_cache:/var/www/atom/cache
+      - atom_uploads:/var/www/atom/uploads:rw
+      - atom_cache:/var/www/atom/cache:rw
     env_file:
       - .env
     command: init
@@ -65,19 +65,19 @@ services:
   db:
     image: percona/percona-server:8.4
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql:rw
     #      - ./init-db:/docker-entrypoint-initdb.d
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-atom_db}
       MYSQL_USER: ${MYSQL_USER:-atom_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-atompassword}
+      PERCONA_TELEMETRY_DISABLE: 1
     command:
       - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
+      - --collation-server=utf8mb4_0900_ai_ci
       - --max_allowed_packet=${MYSQL_MAX_ALLOWED_PACKET:-64M}
       - --innodb_buffer_pool_size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
-      - --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
@@ -91,7 +91,6 @@ services:
       - elasticsearch_data:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
       - ES_JAVA_OPTS=${ES_JAVA_OPTS:- -Xms512m -Xmx512m}
     restart: unless-stopped
     healthcheck:
