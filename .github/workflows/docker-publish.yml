@@ -90,6 +90,7 @@ jobs:
             type=raw,value=${{ env.ATOM_REF }}
             type=schedule
             type=ref,event=branch
+            type=ref,event=pr
             type=sha
 
       # Build and push Docker image with Buildx (don't push on PR)
