@@ -41,6 +41,36 @@ case $1 in
         php-fpm -D --allow-to-run-as-root
         nginx -g 'daemon off;'
         ;;
+    'init')
+        echo "Performing initialization tasks..."
+        # Run database migrations
+        php symfony tools:upgrade-sql --no-confirmation
+        echo "Database migrations completed."
+
+        # Populate search index
+        php symfony search:populate
+        echo "Search index populated."
+
+        # Set site title
+        php symfony tools:settings set siteTitle "${ATOM_SITE_TITLE:-My Atom Site}"
+        echo "Site title set to: ${ATOM_SITE_TITLE:-My Atom Site}"
+        # Set site description
+        php symfony tools:settings set siteDescription "${ATOM_SITE_DESCRIPTION:-Welcome to My Atom Site}"
+        echo "Site description set to: ${ATOM_SITE_DESCRIPTION:-Welcome to My Atom Site}"
+        # Set site base URL
+        php symfony tools:settings set siteBaseUrl "${ATOM_SITE_BASE_URL:-http://127.0.0.1}"
+        echo "Site base URL set to: ${ATOM_SITE_BASE_URL:-http://127.0.0.1}"
+
+        # Create admin user if not exists
+        ADMIN_CREATE=$(php symfony tools:add-superuser --email="${ATOM_ADMIN_EMAIL:-admin@example.com}" --password="${ATOM_ADMIN_PASSWORD:-admin}" ${ATOM_ADMIN_USERNAME:-admin})
+        if [ $ADMIN_CREATE -eq 0 ]; then
+          echo "Admin user created with username: ${ATOM_ADMIN_USERNAME:-admin}"
+        else
+          echo "Admin user already exists or failed to create."
+        fi
+
+        echo "Initialization complete."
+        ;;
 esac
 
 exec "${@}"

@@ -1,0 +1,128 @@
+name: 'AtoM'
+
+services:
+  atom:
+    image: ghcr.io/tyler-regan/atom-docker:v2.10.1
+    depends_on:
+      cache:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      gearman:
+        condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
+    volumes:
+      - atom_uploads:/var/www/atom/uploads
+      - atom_cache:/var/www/atom/cache
+    env_file:
+      - .env
+    ports:
+      - '0.0.0.0:${ATOM_PORT:-8080}:80'
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/" ]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+
+  atom_init:
+    image: ghcr.io/tyler-regan/atom-docker:v2.10.1
+    depends_on:
+      cache:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      gearman:
+        condition: service_healthy
+    volumes:
+      - atom_uploads:/var/www/atom/uploads
+      - atom_cache:/var/www/atom/cache
+    env_file:
+      - .env
+    command: init
+    restart: "no"
+
+  cache:
+    image: memcached:1.6-alpine
+    command:
+      - memcached
+      - -m
+      - "${MEMCACHED_MEMORY:-256}"
+      - -p
+      - "11211"
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "echo stats | nc localhost 11211 | head -1" ]
+      timeout: 3s
+      retries: 5
+      interval: 5s
+
+  db:
+    image: percona/percona-server:8.4
+    volumes:
+      - mysql_data:/var/lib/mysql
+    #      - ./init-db:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-atom_db}
+      MYSQL_USER: ${MYSQL_USER:-atom_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-atompassword}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_allowed_packet=${MYSQL_MAX_ALLOWED_PACKET:-64M}
+      - --innodb_buffer_pool_size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
+      - --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS:- -Xms512m -Xmx512m}
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1" ]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  gearmand:
+    image: artefactual/gearmand:1.1.22.1-alpine
+    volumes:
+      - gearman_data:/var/lib/gearmand
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "echo status | nc localhost 4730 | head -1" ]
+      timeout: 3s
+      retries: 5
+      interval: 5s
+
+volumes:
+  mysql_data:
+    driver: local
+  gearman_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  atom_uploads:
+    driver: local
+  atom_cache:
+    driver: local
