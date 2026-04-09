@@ -41,12 +41,14 @@ function get_host_and_port($value, $default_port)
 $CONFIG = [
     'atom.development_mode' => filter_var(getenv_default('ATOM_DEVELOPMENT_MODE', false), FILTER_VALIDATE_BOOLEAN),
     'atom.coverage' => filter_var(getenv_default('ATOM_COVERAGE', false), FILTER_VALIDATE_BOOLEAN),
-    'atom.elasticsearch_host' => getenv_or_fail('ATOM_ELASTICSEARCH_HOST'),
-    'atom.memcached_host' => getenv_or_fail('ATOM_MEMCACHED_HOST'),
-    'atom.gearmand_host' => getenv_or_fail('ATOM_GEARMAND_HOST'),
-    'atom.mysql_dsn' => getenv_or_fail('ATOM_MYSQL_DSN'),
-    'atom.mysql_username' => getenv_or_fail('ATOM_MYSQL_USERNAME'),
-    'atom.mysql_password' => getenv_or_fail('ATOM_MYSQL_PASSWORD'),
+    'atom.elasticsearch_host' => getenv_or_fail('ELASTICSEARCH_HOST'),
+    'atom.elasticsearch_port' => getenv_or_fail('ELASTICSEARCH_PORT'),
+    'atom.memcached_host' => getenv_or_fail('MEMCACHED_HOST'),
+    'atom.memcached_port' => getenv_or_fail('MEMCACHED_PORT'),
+    'atom.gearmand_host' => getenv_or_fail('GEARMAND_HOST'),
+    'atom.mysql_dsn' => 'mysql:host=' . getenv_or_fail('DB_HOST') . ';port=' . getenv_or_fail('DB_PORT') . ';dbname=' . getenv_or_fail('MYSQL_DATABASE') . ';charset=utf8mb4',
+    'atom.mysql_username' => getenv_or_fail('MYSQL_USER'),
+    'atom.mysql_password' => getenv_or_fail('MYSQL_PASSWORD'),
     'atom.debug_ip' => getenv_default('ATOM_DEBUG_IP', ''),
     'php.max_execution_time' => getenv_default('ATOM_PHP_MAX_EXECUTION_TIME', '120'),
     'php.max_input_time' => getenv_default('ATOM_PHP_MAX_INPUT_TIME', '120'),
@@ -54,7 +56,7 @@ $CONFIG = [
     'php.post_max_size' => getenv_default('ATOM_PHP_POST_MAX_SIZE', '72M'),
     'php.upload_max_filesize' => getenv_default('ATOM_PHP_UPLOAD_MAX_FILESIZE', '64M'),
     'php.max_file_uploads' => getenv_default('ATOM_PHP_MAX_FILE_UPLOADS', '20'),
-    'php.date.timezone' => getenv_default('ATOM_PHP_DATE_TIMEZONE', 'America/Vancouver'),
+    'php.date.timezone' => getenv_default('ATOM_TIMEZONE', 'America/Vancouver'),
 ];
 
 //
@@ -98,15 +100,14 @@ file_put_contents(_ATOM_DIR.'/apps/qubit/config/gearman.yml', $gearman_yml);
 //
 
 if (!file_exists(_ATOM_DIR.'/apps/qubit/config/app.yml')) {
-    $parts = get_host_and_port($CONFIG['atom.memcached_host'], 11211);
     $app_yml = <<<EOT
 all:
   upload_limit: -1
   download_timeout: 10
   cache_engine: sfMemcacheCache
   cache_engine_param:
-    host: {$parts['host']}
-    port: {$parts['port']}
+    host: {$CONFIG['atom.memcached_host']}
+    port: {$CONFIG['atom.memcached_port']}
     prefix: atom
     storeCacheInfo: true
     persistent: true
@@ -135,7 +136,6 @@ EOT;
 //
 
 if (!file_exists(_ATOM_DIR.'/apps/qubit/config/factories.yml')) {
-    $parts = get_host_and_port($CONFIG['atom.memcached_host'], 11211);
     $factories_yml = <<<EOT
 prod:
   storage:
@@ -147,8 +147,8 @@ prod:
       cache:
         class: sfMemcacheCache
         param:
-          host: {$parts['host']}
-          port: {$parts['port']}
+          host: {$CONFIG['atom.memcached_host']}
+          port: {$CONFIG['atom.memcached_port']}
           prefix: atom
           storeCacheInfo: true
           persistent: true
@@ -163,8 +163,8 @@ dev:
       cache:
         class: sfMemcacheCache
         param:
-          host: {$parts['host']}
-          port: {$parts['port']}
+          host: {$CONFIG['atom.memcached_host']}
+          port: {$CONFIG['atom.memcached_port']}
           prefix: atom
           storeCacheInfo: true
           persistent: true
@@ -178,12 +178,11 @@ EOT;
 // /config/search.yml
 //
 
-$parts = get_host_and_port($CONFIG['atom.elasticsearch_host'], 9200);
 $search_yml = <<<EOT
 all:
   server:
-    host: {$parts['host']}
-    port: {$parts['port']}
+    host: {$CONFIG['atom.elasticsearch_host']}
+    port: {$CONFIG['atom.elasticsearch_port']}
 
 EOT;
 
