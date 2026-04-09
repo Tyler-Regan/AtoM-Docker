@@ -63,9 +63,6 @@ case $1 in
         else
           echo "Instance has not been initialized. Proceeding with initialization..."
 
-          cat ./apps/qubit/config/app.yml
-          cat ./apps/qubit/config/factories.yml
-
           # Run installer command
           php -d memory_limit=-1 symfony tools:install \
             --database-host=${DB_HOST:-db} \
