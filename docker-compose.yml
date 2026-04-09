@@ -40,7 +40,6 @@ services:
       gearmand:
         condition: service_healthy
     volumes:
-      - atom_uploads:/var/www/atom/uploads:rw
       - atom_cache:/var/www/atom/cache:rw
     env_file:
       - .env
