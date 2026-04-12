@@ -20,6 +20,9 @@ env:
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
+  # Latest AtoM version to publish as "latest" tag, in addition to the version-specific tag.
+  # This should be updated when a new AtoM version is released.
+  LATEST_ATOM_VERSION: 'v2.10.1'
 
 
 jobs:
@@ -87,10 +90,9 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ matrix.atom_ref }},enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=pr
+            type=raw,value=latest,enable=${{ github.ref_name == github.event.repository.default_branch && matrix.atom_ref == env.LATEST_ATOM_VERSION }}
+            type=ref,event=branch,enable=${{ matrix.atom_ref == env.LATEST_ATOM_VERSION }}
+            type=ref,event=pr,enable=${{ matrix.atom_ref == env.LATEST_ATOM_VERSION }}
             type=sha
 
       # Build and push Docker image with Buildx (don't push on PR)
