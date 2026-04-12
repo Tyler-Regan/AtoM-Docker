@@ -20,13 +20,10 @@ env:
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
-  # Git ref for AtoM repo
-  ATOM_REF: v2.10.1
 
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,6 +31,10 @@ jobs:
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
+
+    strategy:
+      matrix:
+        atom_ref: [ 'v2.10.0', 'v2.10.1' ]
 
     steps:
       - name: Checkout repository
@@ -43,7 +44,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: artefactual/atom
-          ref: ${{ env.ATOM_REF }}
+          ref: ${{ matrix.atom_ref }}
           path: atom
 
       - name: Copy Nginx configuration
@@ -85,7 +86,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.ATOM_REF }},enable={{is_default_branch}}
+            type=raw,value=${{ matrix.atom_ref }},enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=schedule
             type=ref,event=branch
