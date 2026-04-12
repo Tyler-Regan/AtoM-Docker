@@ -15,8 +15,8 @@ services:
       gearmand:
         condition: service_healthy
     volumes:
-      - atom_uploads:/var/www/atom/uploads:rw
-      - atom_cache:/var/www/atom/cache:rw
+      - atom_uploads:/atom/src/uploads:rw
+      - atom_cache:/atom/src/cache:rw
     env_file:
       - .env
     ports:
@@ -40,7 +40,7 @@ services:
       gearmand:
         condition: service_healthy
     volumes:
-      - atom_cache:/var/www/atom/cache:rw
+      - atom_cache:/atom/src/cache:rw
     env_file:
       - .env
     command: init
