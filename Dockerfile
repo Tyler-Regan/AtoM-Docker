@@ -67,11 +67,8 @@ RUN set -xe \
 
 FROM php:8.3-fpm-alpine AS runtime
 
-ARG HOST_UID=1000
-ARG HOST_GID=1000
 ENV FOP_HOME=/usr/share/fop-2.1 \
-    LD_PRELOAD=/usr/lib/preloadable_libiconv.so \
-    USERNAME=www-data
+    LD_PRELOAD=/usr/lib/preloadable_libiconv.so
 
 RUN set -xe \
     && apk add --no-cache \
@@ -89,8 +86,12 @@ RUN set -xe \
       bash \
       gnu-libiconv \
       fcgi \
+      libcap \
+    && addgroup -g 1000 -S atom \
+    && adduser -u 1000 -S -D -G atom atom \
     && curl -Ls https://archive.apache.org/dist/xmlgraphics/fop/binaries/fop-2.1-bin.tar.gz | tar xz -C /usr/share \
-    && ln -sf /usr/share/fop-2.1/fop /usr/local/bin/fop
+    && ln -sf /usr/share/fop-2.1/fop /usr/local/bin/fop \
+    && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
 
 COPY --from=php-ext-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=php-ext-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
@@ -98,15 +99,21 @@ COPY --from=php-ext-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d
 COPY docker/etc/nginx/nginx.conf /etc/nginx/nginx.conf
 RUN set -xe \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+    && mkdir -p /run/php-fpm /var/lib/nginx /var/tmp/nginx \
+    && chown -R atom:atom \
+      /run/php-fpm \
+      /var/lib/nginx \
+      /var/tmp/nginx \
+      /var/log/nginx \
+      /usr/local/etc/php \
+      /usr/local/etc/php-fpm.d
 
-RUN set -xe \
-    && usermod -o -u $HOST_UID $USERNAME \
-    && groupmod -o -g $HOST_GID $USERNAME
-
-COPY --from=app-builder --chown=www-data:www-data /atom /atom/src
+COPY --from=app-builder --chown=atom:atom /atom /atom/src
 
 WORKDIR /atom/src
+
+USER atom
 
 ENTRYPOINT ["docker/entrypoint.sh"]
 
