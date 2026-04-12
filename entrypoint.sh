@@ -9,7 +9,6 @@ __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Clean-ups
 rm -rf /usr/local/etc/php-fpm.d/*
-rm -rf ${__dir}/../cache/*
 
 # Populate configuration files
 php ${__dir}/bootstrap.php $@
@@ -38,7 +37,7 @@ case $1 in
         exec php ${__dir}/../symfony jobs:worker
         ;;
     'fpm')
-        php-fpm -D --allow-to-run-as-root
+        php-fpm -D
         nginx -g 'daemon off;'
         ;;
     'init')

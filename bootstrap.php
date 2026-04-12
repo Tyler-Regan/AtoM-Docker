@@ -50,6 +50,7 @@ $CONFIG = [
     'atom.mysql_username' => getenv_or_fail('MYSQL_USER'),
     'atom.mysql_password' => getenv_or_fail('MYSQL_PASSWORD'),
     'atom.debug_ip' => getenv_default('ATOM_DEBUG_IP', ''),
+    'atom.static_url' => getenv_default('ATOM_STATIC_URL', ''),
     'php.max_execution_time' => getenv_default('ATOM_PHP_MAX_EXECUTION_TIME', '120'),
     'php.max_input_time' => getenv_default('ATOM_PHP_MAX_INPUT_TIME', '120'),
     'php.memory_limit' => getenv_default('ATOM_PHP_MEMORY_LIMIT', '512M'),
@@ -119,7 +120,7 @@ all:
       default-src 'self';
       font-src 'self' https://fonts.gstatic.com;
       form-action 'self';
-      img-src 'self' https://*.googleapis.com https://*.gstatic.com *.google.com  *.googleusercontent.com data: https://www.gravatar.com/avatar/ https://*.google-analytics.com https://*.googletagmanager.com blob:;
+      img-src 'self' {$CONFIG['atom.static_url']} https://*.googleapis.com https://*.gstatic.com *.google.com  *.googleusercontent.com data: https://www.gravatar.com/avatar/ https://*.google-analytics.com https://*.googletagmanager.com blob:;
       script-src 'self' https://*.googletagmanager.com 'nonce' https://*.googleapis.com https://*.gstatic.com *.google.com https://*.ggpht.com *.googleusercontent.com blob:;
       style-src 'self' 'nonce' https://fonts.googleapis.com;
       worker-src 'self' blob:;
@@ -316,11 +317,11 @@ daemonize = yes
 access.log = /proc/self/fd/2
 clear_env = no
 catch_workers_output = yes
-user = www-data
-group = www-data
-listen = /run/php8.3-fpm.atom.sock
-listen.owner = www-data
-listen.group = www-data
+user = atom
+group = atom
+listen = /run/php-fpm/atom.sock
+listen.owner = atom
+listen.group = atom
 pm = dynamic
 pm.max_children = 5
 pm.start_servers = 2

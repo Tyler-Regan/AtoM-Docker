@@ -1,0 +1,40 @@
+services:
+  # Override the atom service to add the s3fs dependency and volume mount for the S3 bucket
+  atom:
+    depends_on:
+      atom_init:
+        condition: service_completed_successfully
+      cache:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      gearmand:
+        condition: service_healthy
+    volumes:
+      - /mnt/s3bucket:/atom/src/uploads:rslave
+      - atom_cache:/atom/src/cache:rw
+
+  # Add the s3fs service to mount the S3 bucket
+  s3fs:
+    image: efrecon/s3fs:1.92
+    volumes:
+      - /mnt/s3bucket:/opt/s3fs/bucket:rshared
+    environment:
+      AWS_S3_BUCKET: '${AWS_S3_BUCKET}'
+      AWS_S3_ACCESS_KEY_ID: '${AWS_S3_ACCESS_KEY_ID}'
+      AWS_S3_SECRET_ACCESS_KEY: '${AWS_S3_SECRET_ACCESS_KEY}'
+      AWS_S3_URL: '${AWS_S3_URL}'
+      AWS_S3_MOUNT: '/opt/s3fs/bucket'
+      S3FS_ARGS: '${S3FS_ARGS:-}'
+      S3FS_DEBUG: '${S3FS_DEBUG:-0}'
+      UID: '${UID:-1000}'
+      GID: '${GID:-1000}'
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    security_opt:
+      - 'apparmor:unconfined'
