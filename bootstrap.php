@@ -121,6 +121,7 @@ all:
       font-src 'self' https://fonts.gstatic.com;
       form-action 'self';
       img-src 'self' {$CONFIG['atom.static_url']} https://*.googleapis.com https://*.gstatic.com *.google.com  *.googleusercontent.com data: https://www.gravatar.com/avatar/ https://*.google-analytics.com https://*.googletagmanager.com blob:;
+      media-src 'self' {$CONFIG['atom.static_url']};
       script-src 'self' https://*.googletagmanager.com 'nonce' https://*.googleapis.com https://*.gstatic.com *.google.com https://*.ggpht.com *.googleusercontent.com blob:;
       style-src 'self' 'nonce' https://fonts.googleapis.com;
       worker-src 'self' blob:;
