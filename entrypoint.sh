@@ -7,10 +7,6 @@ set -o nounset
 
 __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-mkdir -p "${__dir}/../cache"
-# Ensure mounted/cache directories are writable by the runtime user.
-test -w "${__dir}/../cache"
-
 # Clean-ups
 rm -rf /usr/local/etc/php-fpm.d/*
 
