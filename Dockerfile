@@ -63,8 +63,7 @@ RUN set -xe \
     && mv /atom/build/vendor/composer vendor/ \
     && mv /atom/build/node_modules . \
     && npm run build \
-    && rm -rf /atom/build/ \
-    && mkdir -p /atom/cache /atom/uploads
+    && rm -rf /atom/build/
 
 FROM php:8.3-fpm-alpine AS runtime
 
@@ -97,21 +96,23 @@ RUN set -xe \
 COPY --from=php-ext-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=php-ext-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
+COPY --from=app-builder --chown=atom:atom /atom /atom/src
+
 COPY docker/etc/nginx/nginx-default.conf /etc/nginx/nginx.conf
 COPY docker/etc/nginx/nginx-s3fs.conf /etc/nginx/nginx-s3fs.conf
 RUN set -xe \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log \
-    && mkdir -p /run/php-fpm /var/lib/nginx /var/tmp/nginx \
+    && mkdir -p /atom/src/cache /atom/src/uploads /run/php-fpm /var/lib/nginx /var/tmp/nginx \
     && chown -R atom:atom \
+      /atom/src/cache \
+      /atom/src/uploads \
       /run/php-fpm \
       /var/lib/nginx \
       /var/tmp/nginx \
       /var/log/nginx \
       /usr/local/etc/php \
       /usr/local/etc/php-fpm.d
-
-COPY --from=app-builder --chown=atom:atom /atom /atom/src
 
 WORKDIR /atom/src
 
