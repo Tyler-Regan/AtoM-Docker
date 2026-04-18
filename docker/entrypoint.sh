@@ -7,6 +7,10 @@ set -o nounset
 
 __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Ensure mounted cache & uploads directories are writable by the runtime user.
+test -w "${__dir}/../cache" || (echo "Error: Cache directory is not writable. Check permissions." && exit 1)
+test -w "${__dir}/../uploads" || (echo "Error: Uploads directory is not writable. Check permissions." && exit 1)
+
 # Clean-ups
 rm -rf /usr/local/etc/php-fpm.d/*
 
