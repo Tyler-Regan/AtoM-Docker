@@ -63,7 +63,8 @@ RUN set -xe \
     && mv /atom/build/vendor/composer vendor/ \
     && mv /atom/build/node_modules . \
     && npm run build \
-    && rm -rf /atom/build/
+    && rm -rf /atom/build/ \
+    && mkdir -p /atom/cache /atom/uploads
 
 FROM php:8.3-fpm-alpine AS runtime
 
