@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o pipefail
-set -o nounset
-# set -o xtrace
+set -o errexit # Exit immediately if a command exits with a non-zero status.
+set -o pipefail # Exit if any command in a pipeline fails (not just the last one).
+set -o nounset # Treat unset variables as an error and exit immediately.
+# set -o xtrace # Enable debug mode to print each command before executing it.
 
+# Determine the directory of the script
 __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Ensure mounted cache & uploads directories are writable by the runtime user.
 test -w "${__dir}/../cache" || (echo "Error: Cache directory is not writable. Check permissions." && exit 1)
 test -w "${__dir}/../uploads" || (echo "Error: Uploads directory is not writable. Check permissions." && exit 1)
 
-# Clean-ups
+# Clear default php-fpm configuration to avoid conflicts with our custom configuration.
 rm -rf /usr/local/etc/php-fpm.d/*
 
 # Populate configuration files
