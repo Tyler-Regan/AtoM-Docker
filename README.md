@@ -115,7 +115,7 @@ This mode mounts an S3 bucket into `/atom/src/uploads` via `s3fs` and the `docke
 - Container runtime allows `SYS_ADMIN` and `apparmor:unconfined`
 
 2. Configure S3 variables in `.env`:
-
+- `USE_S3FS` set to `true`
 - `AWS_S3_BUCKET`
 - `AWS_S3_ACCESS_KEY_ID`
 - `AWS_S3_SECRET_ACCESS_KEY`

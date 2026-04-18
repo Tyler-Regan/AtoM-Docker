@@ -14,9 +14,10 @@ services:
         condition: service_healthy
       gearmand:
         condition: service_healthy
+    tmpfs:
+      - /atom/src/cache:mode=770,uid=1000,gid=1000
     volumes:
       - atom_uploads:/atom/src/uploads:rw
-      - atom_cache:/atom/src/cache:rw
     env_file:
       - .env
     ports:
@@ -39,8 +40,10 @@ services:
         condition: service_healthy
       gearmand:
         condition: service_healthy
+    tmpfs:
+      - /atom/src/cache:mode=770,uid=1000,gid=1000
     volumes:
-      - atom_cache:/atom/src/cache:rw
+      - atom_uploads:/atom/src/uploads:rw
     env_file:
       - .env
     command: init
@@ -121,6 +124,4 @@ volumes:
   elasticsearch_data:
     driver: local
   atom_uploads:
-    driver: local
-  atom_cache:
     driver: local
