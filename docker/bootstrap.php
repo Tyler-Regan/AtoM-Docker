@@ -42,11 +42,12 @@ $CONFIG = [
     'atom.development_mode' => filter_var(getenv_default('ATOM_DEVELOPMENT_MODE', false), FILTER_VALIDATE_BOOLEAN),
     'atom.coverage' => filter_var(getenv_default('ATOM_COVERAGE', false), FILTER_VALIDATE_BOOLEAN),
     'atom.elasticsearch_host' => getenv_or_fail('ELASTICSEARCH_HOST'),
-    'atom.elasticsearch_port' => getenv_or_fail('ELASTICSEARCH_PORT'),
+    'atom.elasticsearch_port' => getenv_default('ELASTICSEARCH_PORT', 9200),
     'atom.memcached_host' => getenv_or_fail('MEMCACHED_HOST'),
-    'atom.memcached_port' => getenv_or_fail('MEMCACHED_PORT'),
+    'atom.memcached_port' => getenv_default('MEMCACHED_PORT', 11211),
     'atom.gearmand_host' => getenv_or_fail('GEARMAND_HOST'),
-    'atom.mysql_dsn' => 'mysql:host=' . getenv_or_fail('DB_HOST') . ';port=' . getenv_or_fail('DB_PORT') . ';dbname=' . getenv_or_fail('MYSQL_DATABASE') . ';charset=utf8mb4',
+    'atom.gearmand_port' => getenv_default('GEARMAND_PORT', 4730),
+    'atom.mysql_dsn' => 'mysql:host=' . getenv_or_fail('DB_HOST') . ';port=' . getenv_default('DB_PORT', 3306) . ';dbname=' . getenv_or_fail('MYSQL_DATABASE') . ';charset=utf8mb4',
     'atom.mysql_username' => getenv_or_fail('MYSQL_USER'),
     'atom.mysql_password' => getenv_or_fail('MYSQL_PASSWORD'),
     'atom.debug_ip' => getenv_default('ATOM_DEBUG_IP', ''),
@@ -90,7 +91,7 @@ if (!file_exists(_ATOM_DIR.'/config/appChallenge.yml')) {
 $gearman_yml = <<<EOT
 all:
   servers:
-    default: {$CONFIG['atom.gearmand_host']}
+    default: {$CONFIG['atom.gearmand_host']}:{$CONFIG['atom.gearmand_port']}
 EOT;
 
 @unlink(_ATOM_DIR.'/apps/qubit/config/gearman.yml');

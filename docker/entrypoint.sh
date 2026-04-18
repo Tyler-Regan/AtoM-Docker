@@ -5,6 +5,46 @@ set -o pipefail # Exit if any command in a pipeline fails (not just the last one
 set -o nounset # Treat unset variables as an error and exit immediately.
 # set -o xtrace # Enable debug mode to print each command before executing it.
 
+# Make sure all environment variables are set and not empty. If any variable is missing, the script will exit with an error.
+REQUIRED_VARS=(
+  DB_HOST
+  MYSQL_DATABASE
+  MYSQL_USER
+  MYSQL_PASSWORD
+  MEMCACHED_HOST
+  ELASTICSEARCH_HOST
+  GEARMAND_HOST
+  ATOM_ADMIN_USERNAME
+  ATOM_ADMIN_EMAIL
+  ATOM_ADMIN_PASSWORD
+  ATOM_SITE_TITLE
+  ATOM_SITE_DESCRIPTION
+  ATOM_SITE_BASE_URL
+)
+for var in "${REQUIRED_VARS[@]}"; do
+  if [ -z "${!var:-}" ]; then
+    echo "Error: Environment variable '$var' is not set or is empty. Please set it before running the container."
+    exit 1
+  fi
+done
+
+# If USE_S3FS is set to true, then validate that all required S3FS-related environment variables are set and not empty.
+if [ "$USE_S3FS" = "true" ]; then
+  REQUIRED_VARS_S3FS=(
+    AWS_S3_BUCKET
+    AWS_S3_ACCESS_KEY_ID
+    AWS_S3_SECRET_ACCESS_KEY
+    AWS_S3_URL
+    ATOM_STATIC_URL
+  )
+  for var in "${REQUIRED_VARS_S3FS[@]}"; do
+    if [ -z "${!var:-}" ]; then
+      echo "Error: Environment variable '$var' is required when USE_S3FS is set to 'true'. Please set it before running the container."
+      exit 1
+    fi
+  done
+fi
+
 # Determine the directory of the script
 __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -19,7 +59,7 @@ rm -rf /usr/local/etc/php-fpm.d/*
 php ${__dir}/bootstrap.php $@
 status=$?
 if [ $status -ne 0 ]; then
-    echo "bootstrap.php failed!"
+    echo "Error: Failed to populate configuration files. Check the error messages above for details."
     exit $status
 fi
 
