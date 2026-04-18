@@ -14,8 +14,6 @@ services:
         condition: service_healthy
       gearmand:
         condition: service_healthy
-    tmpfs:
-      - /atom/src/cache:mode=770,uid=1000,gid=1000
     volumes:
       - atom_uploads:/atom/src/uploads:rw
     env_file:
@@ -28,6 +26,16 @@ services:
       timeout: 10s
       retries: 5
       interval: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${ATOM_PHP_MEMORY_LIMIT:-512m}
+        reservations:
+          cpus: '0.50'
+          memory: ${ATOM_PHP_MEMORY_LIMIT:-512m}
+    tmpfs:
+      - /atom/src/cache:mode=770,uid=1000,gid=1000
 
   atom_init:
     image: ghcr.io/tyler-regan/atom-docker:v2.10.1
@@ -40,14 +48,50 @@ services:
         condition: service_healthy
       gearmand:
         condition: service_healthy
-    tmpfs:
-      - /atom/src/cache:mode=770,uid=1000,gid=1000
     volumes:
       - atom_uploads:/atom/src/uploads:rw
     env_file:
       - .env
     command: init
     restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 1g
+        reservations:
+          cpus: '0.50'
+          memory: 1g
+    tmpfs:
+      - /atom/src/cache:mode=770,uid=1000,gid=1000
+
+  atom_worker:
+    image: ghcr.io/tyler-regan/atom-docker:v2.10.1
+    depends_on:
+      atom_init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      gearmand:
+        condition: service_healthy
+    volumes:
+      - atom_uploads:/atom/src/uploads:rw
+    env_file:
+      - .env
+    command: worker
+    restart: on-failure:5
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64m
+        reservations:
+          cpus: '0.25'
+          memory: 64m
+    tmpfs:
+      - /atom/src/cache:mode=770,uid=1000,gid=1000
 
   cache:
     image: memcached:1.6-alpine
@@ -63,12 +107,19 @@ services:
       timeout: 3s
       retries: 5
       interval: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 32m
+        reservations:
+          cpus: '0.25'
+          memory: 32m
 
   db:
     image: percona/percona-server:8.4
     volumes:
       - mysql_data:/var/lib/mysql:rw
-    #      - ./init-db:/docker-entrypoint-initdb.d
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-atom_db}
@@ -86,6 +137,14 @@ services:
       timeout: 20s
       retries: 10
       interval: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 1g
+        reservations:
+          cpus: '0.50'
+          memory: 1g
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
@@ -100,6 +159,14 @@ services:
       timeout: 10s
       retries: 5
       interval: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 2g
+        reservations:
+          cpus: '0.25'
+          memory: 2g
     ulimits:
       memlock:
         soft: -1
@@ -115,6 +182,14 @@ services:
       timeout: 3s
       retries: 5
       interval: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 6m
+        reservations:
+          cpus: '0.25'
+          memory: 6m
 
 volumes:
   mysql_data:
