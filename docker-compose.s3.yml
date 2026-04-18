@@ -12,6 +12,8 @@ services:
         condition: service_healthy
       gearmand:
         condition: service_healthy
+      s3fs:
+        condition: service_healthy
     volumes:
       - /mnt/s3bucket:/atom/src/uploads:rslave
       - atom_cache:/atom/src/cache:rw
