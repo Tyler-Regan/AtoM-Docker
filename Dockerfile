@@ -96,7 +96,8 @@ RUN set -xe \
 COPY --from=php-ext-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=php-ext-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
-COPY docker/etc/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY docker/etc/nginx/nginx-default.conf /etc/nginx/nginx.conf
+COPY docker/etc/nginx/nginx-s3fs.conf /etc/nginx/nginx-s3fs.conf
 RUN set -xe \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log \

@@ -23,6 +23,7 @@ case $1 in
         echo "Usage: (convenience shortcuts)"
         echo "  ./entrypoint.sh worker      Execute worker."
         echo "  ./entrypoint.sh fpm         Execute php-fpm."
+        echo "  ./entrypoint.sh init        Execute initialization script."
         echo ""
         echo "You can also pass other commands:"
         echo "  ./entrypoint.sh bash"
@@ -37,7 +38,17 @@ case $1 in
         exec php ${__dir}/../symfony jobs:worker
         ;;
     'fpm')
+        echo "Starting php-fpm and nginx..."
+        # If S3FS is enabled, use the nginx configuration that serves static files from S3
+        if [ "$USE_S3FS" = "true" ]; then
+          echo "Using nginx configuration for S3FS."
+          rm -f /etc/nginx/nginx.conf
+          cp /etc/nginx/nginx-s3fs.conf /etc/nginx/nginx.conf
+          echo "Nginx configuration for S3FS has been applied."
+        fi
+        echo "Starting php-fpm"
         php-fpm -D
+        echo "Starting nginx"
         nginx -g 'daemon off;'
         ;;
     'init')
