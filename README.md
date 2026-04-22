@@ -108,6 +108,11 @@ Notes:
 
 This mode mounts an S3 bucket into `/atom/src/uploads` via `s3fs` and the `docker-compose.s3.yml` override.
 
+At container startup, `docker/entrypoint.sh` selects the nginx config based on `USE_S3FS`:
+
+- `USE_S3FS=true` enables the S3-aware config in `docker/etc/nginx/nginx-s3fs.conf`
+- `USE_S3FS=false` (or unset) keeps the default config in `docker/etc/nginx/nginx-default.conf`
+
 1. Ensure host support:
 
 - `/mnt/s3bucket` exists on the host
@@ -120,8 +125,16 @@ This mode mounts an S3 bucket into `/atom/src/uploads` via `s3fs` and the `docke
 - `AWS_S3_ACCESS_KEY_ID`
 - `AWS_S3_SECRET_ACCESS_KEY`
 - `AWS_S3_URL`
-- `ATOM_STATIC_URL`
+- `ATOM_STATIC_URL` as a concrete absolute URL for your static host, for example `https://cdn.example.com` or `https://cdn.example.com/static`
 - Optional: `S3FS_ARGS`, `S3FS_DEBUG`
+
+`ATOM_STATIC_URL` is also used to render the nginx S3 proxy target at startup. For that reason it must be:
+
+- an absolute `http://` or `https://` URL
+- a concrete host name, not a wildcard such as `https://*.example.com`
+- free of query strings, fragments, and embedded credentials
+
+If you include a path prefix, nginx will preserve it when proxying `/uploads/r/*` requests.
 
 3. Start with compose override:
 

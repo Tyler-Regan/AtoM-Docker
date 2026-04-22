@@ -5,6 +5,134 @@ set -o pipefail # Exit if any command in a pipeline fails (not just the last one
 set -o nounset # Treat unset variables as an error and exit immediately.
 # set -o xtrace # Enable debug mode to print each command before executing it.
 
+USE_S3FS="${USE_S3FS:-false}"
+
+is_truthy() {
+  case "${1,,}" in
+    true|1|yes|on)
+      return 0
+      ;;
+    false|0|no|off|'')
+      return 1
+      ;;
+    *)
+      echo "Error: USE_S3FS must be a boolean value (true/false, 1/0, yes/no, on/off). Got: '$1'"
+      exit 1
+      ;;
+  esac
+}
+
+escape_sed_replacement() {
+  printf '%s' "$1" | sed 's/[&|]/\\&/g'
+}
+
+render_s3_nginx_config() {
+  local template="/etc/nginx/nginx-s3fs.conf"
+  local atom_static_origin
+  local atom_static_authority
+  local atom_static_host
+  local atom_static_base_path
+  local static_url_parts=()
+
+  if [ ! -r "$template" ]; then
+    echo "Error: Nginx S3 template '$template' is not readable."
+    exit 1
+  fi
+
+  mapfile -t static_url_parts < <(ATOM_STATIC_URL="$ATOM_STATIC_URL" php <<'PHP'
+<?php
+$url = getenv('ATOM_STATIC_URL');
+$parts = parse_url($url);
+
+if (false === $parts || !isset($parts['scheme'], $parts['host'])) {
+    fwrite(STDERR, "Error: ATOM_STATIC_URL must be a valid absolute http(s) URL.\n");
+    exit(1);
+}
+
+$scheme = strtolower($parts['scheme']);
+if (!in_array($scheme, ['http', 'https'], true)) {
+    fwrite(STDERR, "Error: ATOM_STATIC_URL must use the http or https scheme.\n");
+    exit(1);
+}
+
+if (isset($parts['user']) || isset($parts['pass'])) {
+    fwrite(STDERR, "Error: ATOM_STATIC_URL must not include credentials.\n");
+    exit(1);
+}
+
+if (str_contains($parts['host'], '*')) {
+    fwrite(STDERR, "Error: ATOM_STATIC_URL must use a concrete host name; wildcard hosts are not supported for nginx proxying.\n");
+    exit(1);
+}
+
+if (isset($parts['query']) || isset($parts['fragment'])) {
+    fwrite(STDERR, "Error: ATOM_STATIC_URL must not include a query string or fragment.\n");
+    exit(1);
+}
+
+$host = $parts['host'];
+$authority = $host . (isset($parts['port']) ? ':' . $parts['port'] : '');
+$path = rtrim($parts['path'] ?? '', '/');
+
+if ('' !== $path && '/' !== $path[0]) {
+    fwrite(STDERR, "Error: ATOM_STATIC_URL must use an absolute path when a path is provided.\n");
+    exit(1);
+}
+
+if ('/' === $path) {
+    $path = '';
+}
+
+echo $scheme . '://' . $authority, PHP_EOL;
+echo $authority, PHP_EOL;
+echo $host, PHP_EOL;
+echo $path, PHP_EOL;
+PHP
+  )
+
+  if [ "${#static_url_parts[@]}" -ne 4 ]; then
+    echo "Error: Failed to derive nginx S3 proxy settings from ATOM_STATIC_URL."
+    exit 1
+  fi
+
+  atom_static_origin="${static_url_parts[0]}"
+  echo "Derived ATOM_STATIC_ORIGIN: $atom_static_origin"
+  atom_static_authority="${static_url_parts[1]}"
+  echo "Derived ATOM_STATIC_AUTHORITY: $atom_static_authority"
+  atom_static_host="${static_url_parts[2]}"
+  echo "Derived ATOM_STATIC_HOST: $atom_static_host"
+  atom_static_base_path="${static_url_parts[3]}"
+  echo "Derived ATOM_STATIC_BASE_PATH: $atom_static_base_path"
+
+  sed \
+    -e "s|__ATOM_STATIC_ORIGIN__|$(escape_sed_replacement "$atom_static_origin")|g" \
+    -e "s|__ATOM_STATIC_AUTHORITY__|$(escape_sed_replacement "$atom_static_authority")|g" \
+    -e "s|__ATOM_STATIC_HOST__|$(escape_sed_replacement "$atom_static_host")|g" \
+    -e "s|__ATOM_STATIC_BASE_PATH__|$(escape_sed_replacement "$atom_static_base_path")|g" \
+    "$template" > /tmp/nginx.conf
+
+  echo "Nginx S3 proxy target resolved from ATOM_STATIC_URL: ${atom_static_origin}${atom_static_base_path}"
+}
+
+configure_nginx() {
+  local source_config="/etc/nginx/nginx.conf"
+
+  if is_truthy "$USE_S3FS"; then
+    echo "Using nginx configuration for S3FS."
+    render_s3_nginx_config
+  else
+    echo "Using default nginx configuration."
+    if [ ! -r "$source_config" ]; then
+      echo "Error: Nginx configuration '$source_config' is not readable."
+      exit 1
+    fi
+
+    cp "$source_config" /tmp/nginx.conf
+  fi
+
+  echo "Nginx configuration prepared at /tmp/nginx.conf."
+}
+
 # Make sure all environment variables are set and not empty. If any variable is missing, the script will exit with an error.
 REQUIRED_VARS=(
   DB_HOST
@@ -28,8 +156,8 @@ for var in "${REQUIRED_VARS[@]}"; do
   fi
 done
 
-# If USE_S3FS is set to true, then validate that all required S3FS-related environment variables are set and not empty.
-if [ "$USE_S3FS" = "true" ]; then
+# If USE_S3FS is enabled, validate that all required S3FS-related environment variables are set and not empty.
+if is_truthy "$USE_S3FS"; then
   REQUIRED_VARS_S3FS=(
     AWS_S3_BUCKET
     AWS_S3_ACCESS_KEY_ID
@@ -56,14 +184,14 @@ test -w "${__dir}/../uploads" || (echo "Error: Uploads directory is not writable
 rm -rf /usr/local/etc/php-fpm.d/*
 
 # Populate configuration files
-php ${__dir}/bootstrap.php $@
+php "${__dir}/bootstrap.php" "$@"
 status=$?
 if [ $status -ne 0 ]; then
     echo "Error: Failed to populate configuration files. Check the error messages above for details."
     exit $status
 fi
 
-case $1 in
+case "${1:-}" in
     '')
         echo "Usage: (convenience shortcuts)"
         echo "  ./entrypoint.sh worker      Execute worker."
@@ -81,17 +209,11 @@ case $1 in
         ;;
     'fpm')
         echo "Starting php-fpm and nginx..."
-        # If S3FS is enabled, use the nginx configuration that serves static files from S3
-        if [ "$USE_S3FS" = "true" ]; then
-          echo "Using nginx configuration for S3FS."
-          rm -f /etc/nginx/nginx.conf
-          cp /etc/nginx/nginx-s3fs.conf /etc/nginx/nginx.conf
-          echo "Nginx configuration for S3FS has been applied."
-        fi
+        configure_nginx
         echo "Starting php-fpm"
         php-fpm -D
         echo "Starting nginx"
-        nginx -g 'daemon off;'
+        nginx -c /tmp/nginx.conf -g 'daemon off;'
         ;;
     'init')
         echo "Performing initialization tasks..."
